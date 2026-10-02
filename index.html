@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>비버 수리소 — 자연어 저지 v1</title>
+<title>비버 수리소</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 토스 스타일: 회색 바탕 위 흰 카드, 파란 하나로 강조, 테두리 대신 면과 여백으로 구분 */
@@ -788,7 +788,7 @@ const ITEM2 = {
 
   grade(st){
     const added=CANDS.filter(c=>st.added.has(c.id));
-    const answer=`고른 사진: ${[...st.added].join(" ")||"없음"} / 금지 사진: ${st.banned||"없음"}`;
+    const answer=`고른 사진: ${[...st.added].join(" ")||"없음"} / 보여 주면 안 되는 사진: ${st.banned||"없음"}`;
     const banOK = st.banned==="㉳";
     if(st.added.has("㉳"))
       return {ok:false, level:"아직 아님", msg:"㉳는 정답이 잘못 붙은 사진이에요. 이걸 넣으면 판별기는 틀린 규칙을 더 굳게 믿어요.", answer};
@@ -898,20 +898,20 @@ function quoteFound(text, quote){
 function checkVerdict(it, v, text){
   const flags=[];
   if(INJECT.test(text)) flags.push("학생 글에 채점 지시로 보이는 문장");
-  if(!v || typeof v!=="object") throw new Error("판정 형식을 읽을 수 없습니다");
+  if(!v || typeof v!=="object") throw new Error("채점 결과를 읽지 못했어요");
   if(v.판정가능===false) return {...v, crits:[], flags};
   const got=Array.isArray(v.기준별)?v.기준별:[];
   const crits=it.rubric.map(r=>{
     const c=got.find(x=>x&&x.기준===r.name)
          || got.find(x=>x&&squash(x.기준)&&(squash(x.기준).includes(squash(r.name))||squash(r.name).includes(squash(x.기준))));
-    if(!c){ flags.push(`‘${r.name}’ 판정 누락`); return {name:r.name, level:0, ai:null, quote:"", memo:"", flag:"판정 누락"}; }
+    if(!c){ flags.push(`‘${r.name}’ 채점 누락`); return {name:r.name, level:0, ai:null, quote:"", memo:"", flag:"채점 누락"}; }
     const ai=Math.max(0,Math.min(3,Math.round(+c.수준||0)));
     const quote=String(c.근거인용||"").trim();
     let level=ai, flag="";
     if(ai>0 && !quoteFound(text,quote)){ level=0; flag="인용이 학생 글에 없음"; flags.push(`‘${r.name}’ ${flag}`); }
     return {name:r.name, level, ai, quote, memo:String(c.메모||""), flag};
   });
-  if(String(v.교사용_메모||"").includes("채점 지시")) flags.push("저지가 채점 지시 시도를 보고함");
+  if(String(v.교사용_메모||"").includes("채점 지시")) flags.push("AI가 채점 지시 시도를 알려 옴");
   return {...v, crits, flags:[...new Set(flags)]};
 }
 
@@ -992,7 +992,7 @@ function renderNav(){
   const m=document.getElementById("modeBtn");
   m.hidden=!APP.teacher;
   m.dataset.on = APP.online?"on":"off";
-  m.textContent = "채점 방식: "+(APP.online?"온라인 저지":"자기평가")+" (눌러서 바꾸기)";
+  m.textContent = "채점 방식: "+(APP.online?"AI 채점":"스스로 점검")+" (눌러서 바꾸기)";
   m.onclick=()=>{ APP.online=!APP.online; draw(); };
 }
 
@@ -1021,9 +1021,9 @@ function itemHead(it){
 function viewHome(){
   return `<div class="hero">
     <div class="eyebrow">비버챌린지 유형 · 비버 수리소</div>
-    <h1 class="title">고친 다음, 왜 그렇게 고쳤는지 말해 주세요.</h1>
-    <p class="lede">먼저 고장 난 장치를 직접 고칩니다. 고친 결과는 컴퓨터가 바로 확인해 줍니다.
-      그다음 왜 그렇게 고쳤는지 글로 씁니다. 맞춤법이나 글솜씨가 아니라 생각의 흐름을 봅니다.</p>
+    <h1 class="title">고쳐 보고, 왜 그렇게 고쳤는지 알려 주세요.</h1>
+    <p class="lede">먼저 고장 난 장치를 직접 고쳐요. 제대로 고쳤는지는 컴퓨터가 바로 알려 줘요.
+      그다음 왜 그렇게 고쳤는지 글로 써요. 맞춤법이나 글솜씨가 아니라 어떻게 생각했는지를 봐요.</p>
   </div>
   <div class="itemlist">${ITEMS.map((it,i)=>`
     <button class="ilink" data-i="${i}">
@@ -1033,8 +1033,8 @@ function viewHome(){
         ${it.keywords.map(k=>`<span class="chip">${k}</span>`).join("")}
         ${APP.st[i].done?`<span class="chip done">제출 완료 · 해설 보기</span>`:""}</div>
     </button>`).join("")}</div>
-  <p class="note">두 문항 모두 신규 창작이며 비버챌린지 기출 문항의 지문·삽화를 포함하지 않습니다.
-    문항 1은 사람이 규칙을 직접 고치는 유형(CT 1.0)이고, 문항 2는 데이터를 고쳐 규칙이 스스로 바뀌게 하는 유형(CT 2.0)입니다.</p>`;
+  <p class="note">두 문항 모두 새로 만든 것으로, 비버챌린지 기출 문항의 지문이나 그림은 쓰지 않았습니다.
+    문항 1은 사람이 규칙을 직접 고치는 유형(CT 1.0)이고, 문항 2는 데이터를 고쳐서 규칙이 저절로 바뀌게 하는 유형(CT 2.0)입니다.</p>`;
 }
 
 function viewSolve(){
@@ -1050,19 +1050,19 @@ function viewReason(){
     <p><span class="stamp ${s1.ok?"ok":"no"}">${s1.level}</span></p>
     <p style="margin-top:12px">${esc(s1.answer)}<br><span style="color:var(--ink2)">${s1.msg}</span></p>
     ${s1.ok?"":`<div class="bar"><button class="btn" id="back">다시 고치러 가기</button></div>
-      <p class="hint">고친 뒤 다시 제출할 수 있습니다. 지금 생각을 그대로 아래에 적어 내도 됩니다. 답이 틀려도 왜 그렇게 생각했는지가 중요합니다.</p>`}
+      <p class="hint">다시 고쳐서 제출해도 돼요. 지금 생각을 그대로 아래에 적어 내도 괜찮아요. 답이 틀렸더라도 왜 그렇게 생각했는지가 중요해요.</p>`}
   </div>
   <div class="block"><h3>왜 그렇게 고쳤나요?</h3>
     <ol class="asks">${it.asks.map(q=>`<li>${q}</li>`).join("")}</ol>
-    <p class="hint" style="margin:0 0 10px">네 질문에 모두 답하면 좋습니다. 질문마다 한 문장씩이어도 됩니다. 아래 말머리를 누르면 글이 시작됩니다.</p>
+    <p class="hint" style="margin:0 0 10px">질문마다 한 문장씩만 써도 돼요. 아래 말머리를 누르면 그 말로 글을 시작할 수 있어요.</p>
     <div class="starters">${it.starters.map(t=>`<button type="button" data-starter="${esc(t)}">${t} …</button>`).join("")}</div>
-    <textarea id="reason" aria-label="내 설명" placeholder="한 문장이어도 됩니다. 대신 ‘왜’가 들어 있어야 합니다.">${esc(APP.reason)}</textarea>
-    <p class="hint">글, 번호, 화살표(→) 무엇으로 써도 됩니다. 맞춤법과 글 길이는 보지 않습니다. 쓰기가 어려우면 선생님께 말로 설명해도 됩니다.</p>
+    <textarea id="reason" aria-label="내 설명" placeholder="한 문장이어도 괜찮아요. 다만 ‘왜’ 그런지는 꼭 써 주세요.">${esc(APP.reason)}</textarea>
+    <p class="hint">줄글, 번호, 화살표(→) 등 편한 방법으로 쓰면 돼요. 맞춤법과 글 길이는 보지 않아요. 글로 쓰기 어려우면 선생님께 말로 설명해도 돼요.</p>
   </div>
   ${APP.err?`<div class="callout" style="border-left-color:var(--fault);background:var(--fault-soft)">${esc(APP.err)}</div>`:""}
   <div class="bar">
     <button class="btn" id="judge" ${APP.busy?"disabled":""}>${APP.busy?'<span class="spinner"></span> 읽고 있어요':"설명 제출하기"}</button>
-    <span class="left">${APP.online?`제출 기회 <b>${left}</b>번 남음`:"제출하면 스스로 점검하기로 넘어가고, 설명은 더 고칠 수 없습니다."}</span>
+    <span class="left">${APP.online?`제출 기회 <b>${left}</b>번 남음`:"제출하면 스스로 점검하기로 넘어가요. 그 뒤에는 설명을 고칠 수 없어요."}</span>
   </div>`;
 }
 
@@ -1081,8 +1081,8 @@ function viewVerdict(){
     return `${itemHead(it)}
       <div class="block"><h3>결과</h3>
         <p><span class="stamp">다시 써 볼까요?</span></p>
-        <p style="margin-top:12px">${esc(v.학생용_피드백||"설명을 읽기 어려웠습니다. 무엇을 왜 그렇게 했는지 한 문장만 더 써 주세요.")}</p>
-        <p class="hint">이번 제출은 기회에서 빼지 않았습니다.</p>
+        <p style="margin-top:12px">${esc(v.학생용_피드백||"설명을 이해하기 어려웠어요. 무엇을 왜 그렇게 했는지 한 문장만 더 써 주세요.")}</p>
+        <p class="hint">이번 제출은 제출 기회에서 빼지 않았어요.</p>
       </div>
       <div class="bar"><button class="btn" id="reback">설명 다시 쓰기</button></div>`;
   }
@@ -1098,23 +1098,23 @@ function viewVerdict(){
     return `<div class="crit">
       <div class="crit-h"><b>${esc(c.name)}</b><span class="lv" data-v="${lv}">${lv} / 3</span>
         ${changed?'<span class="chip" style="border-color:var(--stamp);color:var(--stamp)">교사 조정</span>':""}
-        ${c.flag?`<span class="flag">${esc(c.flag)}${c.ai!==null&&c.ai!==c.level?` · 저지 ${c.ai}점`:""}</span>`:""}
+        ${c.flag?`<span class="flag">${esc(c.flag)}${c.ai!==null&&c.ai!==c.level?` · AI는 ${c.ai}점`:""}</span>`:""}
         <span class="override"><span>교사 조정</span>
           ${[0,1,2,3].map(n=>`<button data-c="${esc(c.name)}" data-n="${n}"
              aria-pressed="${APP.override[c.name]===n}">${n}</button>`).join("")}</span>
       </div>
       <div class="crit-b">
-        ${c.quote?`<p class="quote">“${esc(c.quote)}”</p>`:`<p class="quote" style="border-color:var(--fault)">인용할 문장이 없었습니다.</p>`}
+        ${c.quote?`<p class="quote">“${esc(c.quote)}”</p>`:`<p class="quote" style="border-color:var(--fault)">옮겨 올 문장이 없었습니다.</p>`}
         ${c.memo?`<div style="color:var(--ink2)">${esc(c.memo)}</div>`:""}
       </div></div>`;}).join("")}
-    ${v.교사용_메모?`<p class="hint">조교 메모: ${esc(v.교사용_메모)}</p>`:""}
-    <p class="hint">모든 수준에는 학생 원문 인용이 붙습니다. 인용이 학생 글에 없으면 자동으로 0점으로 내리고 표시합니다. 최종 채점 권한은 교사에게 있습니다.</p>
+    ${v.교사용_메모?`<p class="hint">AI 메모: ${esc(v.교사용_메모)}</p>`:""}
+    <p class="hint">점수마다 학생이 쓴 문장을 함께 보여 줍니다. 그 문장이 실제 학생 글에 없으면 자동으로 0점 처리하고 표시해 둡니다. 최종 점수는 선생님이 정합니다.</p>
   </div>`;
 
   return `${itemHead(it)}
   <div class="block"><h3>결과</h3>
     ${verdictStamps(v,total)}
-    <p class="hint" style="margin-top:10px">점수는 조교의 의견입니다. 선생님이 다시 확인합니다.</p>
+    <p class="hint" style="margin-top:10px">이 점수는 AI가 매긴 참고 점수예요. 선생님이 다시 확인할 거예요.</p>
   </div>
   ${v.학생용_피드백?`<div class="callout">${esc(v.학생용_피드백)}</div>`:""}
   ${v.후속발문?`<div class="probe"><div class="eyebrow">생각해 볼 질문</div><p>${esc(v.후속발문)}</p></div>`:""}
@@ -1123,7 +1123,7 @@ function viewVerdict(){
     ${left>0?`<button class="btn ghost" id="reback">한 번 더 고쳐 쓰기 (남은 기회 ${left}번)</button>`:""}
     <button class="btn" id="toexp">끝내고 해설 보기</button>
   </div>
-  ${left>0?`<p class="hint">해설을 보면 이 문항은 끝나고, 설명을 더 고칠 수 없습니다.</p>`:""}`;
+  ${left>0?`<p class="hint">해설을 보면 이 문항은 끝나요. 그 뒤에는 설명을 고칠 수 없어요.</p>`:""}`;
 }
 
 function viewSelf(){
@@ -1139,14 +1139,14 @@ function viewSelf(){
   ${APP.notice?`<div class="callout" style="margin-bottom:20px">${esc(APP.notice)}</div>`:""}
   <div class="block"><h3>스스로 점검하기</h3>
     <p><span class="stamp ${s1.ok?"ok":"no"}">고치기 ${s1.level}</span> &nbsp;<span class="stamp">스스로 매긴 점수 ${tot} / 12</span></p>
-    <p class="hint" style="margin-top:10px">설명은 이미 제출되었습니다. 내 설명을 다시 읽고, 기준마다 몇 점일지 정직하게 골라 보세요. 선생님이 나중에 함께 확인합니다.</p>
+    <p class="hint" style="margin-top:10px">설명은 제출됐어요. 내가 쓴 설명을 다시 읽어 보고, 기준마다 몇 점일지 솔직하게 골라 보세요. 나중에 선생님과 함께 확인해요.</p>
   </div>
   <div class="block"><h3>기준별 점검</h3>${rows}</div>
   <div class="block"><h3>생각해 볼 질문</h3>
     ${it.probes.map((p,i)=>`<div class="probe" style="margin-top:${i?10:0}px"><div class="eyebrow">질문 ${i+1}</div><p>${p}</p></div>`).join("")}
   </div>
   <div class="bar"><button class="btn" id="toexp" ${marked<it.rubric.length?"disabled":""}>끝내고 해설 보기</button></div>
-  ${marked<it.rubric.length?`<p class="why">네 기준 모두 점수를 골라야 해설로 넘어갈 수 있습니다.</p>`:""}`;
+  ${marked<it.rubric.length?`<p class="why">네 기준에 모두 점수를 골라야 해설을 볼 수 있어요.</p>`:""}`;
 }
 
 function viewExplain(){
@@ -1159,7 +1159,7 @@ function viewExplain(){
   <div class="bar">
     <button class="btn ghost" id="home2">메인 메뉴</button>
     ${next>=0?`<button class="btn" id="next2">다음 문항 풀기 — ${ITEMS[next].title}</button>`
-             :`<span class="count">모든 문항을 마쳤습니다.</span>`}
+             :`<span class="count">모든 문항을 다 풀었어요.</span>`}
   </div>
   <div class="bar">
     <button class="btn ghost sm" id="dlme">내 기록 파일로 저장</button>
@@ -1176,36 +1176,36 @@ function latestPerItem(){
 
 function viewTeacher(){
   const rows=LOG.map((r,i)=>`<tr><td class="n">${i+1}</td><td>${esc(r.item)}</td>
-    <td>${esc(r.s1)}${r.s1Submits>1?`<br><small style="color:var(--ink3)">제출 ${r.s1Submits}회 · 첫 제출 ${esc(r.s1First)}</small>`:""}</td>
+    <td>${esc(r.s1)}${r.s1Submits>1?`<br><small style="color:var(--ink3)">${r.s1Submits}번 제출 · 처음 낸 답 ${esc(r.s1First)}</small>`:""}</td>
     <td class="n">${r.try||1}</td>
     <td class="n">${r.s2===null?"—":r.s2+" / 12"}</td>
-    <td class="n">${r.tests}</td><td>${esc(r.mode)}</td>
+    <td class="n">${r.tests}</td><td>${esc(modeLabel(r.mode))}</td>
     <td>${(r.flags||[]).map(f=>`<span class="flag">${esc(f)}</span>`).join("")||""}</td></tr>`).join("")
-    || `<tr><td colspan="8" style="color:var(--ink3)">아직 제출된 기록이 없습니다. 문항을 풀고 설명을 내면 여기에 쌓입니다.</td></tr>`;
+    || `<tr><td colspan="8" style="color:var(--ink3)">아직 제출 기록이 없습니다. 학생이 문항을 풀고 설명을 내면 여기에 쌓입니다.</td></tr>`;
   const latest=latestPerItem();
   const q=(a,b)=>latest.filter(r=>r.correct===a && r.hasReason===b).length;
   const it=item();
   return `<div class="eyebrow">교사실</div>
-  <h1 class="title">판정을 의심할 수 있는 화면</h1>
-  <p class="lede" style="margin-bottom:26px">저지는 조교입니다. 기준별 판정은 학생 원문 인용과 함께 표시되고, 교사가 언제든 조정할 수 있습니다.
-    이 화면과 정답·해설 탭은 주소 끝에 <b>#teacher</b>를 붙여 열었을 때만 보입니다.</p>
+  <h1 class="title">채점 결과를 직접 확인하세요</h1>
+  <p class="lede" style="margin-bottom:26px">AI 채점은 참고용입니다. 기준별 점수에는 학생이 쓴 문장이 함께 표시되고, 선생님이 언제든 점수를 고칠 수 있습니다.
+    이 화면과 정답·해설 탭은 주소 끝에 <b>#teacher</b>를 붙여서 열었을 때만 보입니다.</p>
 
   <div class="block"><h3>2×2 진단표</h3>
     <table class="diag">
       <tr><th></th><th>근거 있음</th><th>근거 없음</th></tr>
-      <tr><th>1단 정답</th>
+      <tr><th>1단계 정답</th>
         <td class="hit">${q(true,true)}<small>이해함</small></td>
-        <td>${q(true,false)}<small>우연·복사 의심 → 후속발문</small></td></tr>
-      <tr><th>1단 오답</th>
-        <td>${q(false,true)}<small>오개념 — 가르칠 것이 가장 많음</small></td>
-        <td>${q(false,false)}<small>미도달</small></td></tr>
+        <td>${q(true,false)}<small>우연히 맞혔거나 베꼈을 수 있음 → 더 물어보기</small></td></tr>
+      <tr><th>1단계 오답</th>
+        <td>${q(false,true)}<small>잘못 이해함 — 지도가 가장 필요함</small></td>
+        <td>${q(false,false)}<small>아직 못 미침</small></td></tr>
     </table>
-    <p class="hint">문항마다 마지막 제출만 셉니다. ‘근거 있음’은 온라인 저지에서 설명 6점 이상, 자기평가에서는 설명이 10자 이상인 경우입니다.
-      1단 제출이 여러 번이고 첫 제출이 오답이었다면 시행착오, 한 번에 맞고 근거가 뚜렷하면 추론입니다.</p>
+    <p class="hint">문항마다 마지막 제출만 셉니다. ‘근거 있음’은 AI 채점이면 설명 점수가 6점 이상, 스스로 점검이면 설명이 10자 이상인 경우입니다.
+      1단계를 여러 번 냈고 처음 낸 답이 틀렸다면 이것저것 해 보다 맞힌 것이고, 한 번에 맞히고 근거도 분명하면 추론해서 푼 것으로 볼 수 있습니다.</p>
   </div>
 
   <div class="block"><h3>제출 기록</h3>
-    <table class="data"><tr><th></th><th>문항</th><th>1단</th><th>설명 시도</th><th>2단</th><th>시험</th><th>모드</th><th>확인 필요</th></tr>${rows}</table>
+    <table class="data"><tr><th></th><th>문항</th><th>1단계</th><th>설명 횟수</th><th>2단계</th><th>미리 해 봄</th><th>채점 방식</th><th>확인 필요</th></tr>${rows}</table>
   </div>
 
   <div class="block"><h3>루브릭 원문 — ${it.title}</h3>
@@ -1223,32 +1223,35 @@ function viewTeacher(){
   </div>
 
   <div class="block"><h3>이 기기 초기화</h3>
-    <p class="hint" style="margin:0 0 10px">다음 학생이 이 기기를 쓰기 전에 누릅니다. 위 기록을 먼저 저장하세요.</p>
+    <p class="hint" style="margin:0 0 10px">다음 학생이 이 기기를 쓰기 전에 누르세요. 지우기 전에 위 기록부터 저장해 두세요.</p>
     <button class="btn ghost sm" id="wipe" style="border-color:var(--fault);color:var(--fault)">진행 상황과 기록 모두 지우기</button>
   </div>
   <div class="bar">
     <button class="btn ghost" id="home3">메인 메뉴</button>
     <button class="btn ghost" id="exp3">정답과 해설</button>
   </div>
-  <p class="note">진행 상황과 기록은 이 기기의 브라우저 저장소에 보조로 남아 새로고침해도 유지됩니다${STORAGE_OK?"":"(지금은 저장소가 막혀 있어 새로고침하면 사라집니다)"}.
-    학생마다 기기가 다르면 기록도 기기마다 따로 쌓이므로, 학생이 ‘내 기록 파일로 저장’한 파일을 모으거나 여기서 내보내세요.</p>`;
+  <p class="note">진행 상황과 기록은 이 기기의 브라우저에도 저장되어서 새로고침해도 남아 있습니다${STORAGE_OK?"":"(지금은 브라우저 저장이 막혀 있어서 새로고침하면 사라집니다)"}.
+    학생마다 쓰는 기기가 다르면 기록도 기기마다 따로 쌓입니다. 학생이 ‘내 기록 파일로 저장’으로 받은 파일을 모으거나, 여기서 내보내세요.</p>`;
 }
 
+// 기록에는 예전 이름("온라인 저지", "자기평가")을 그대로 저장하고, 화면과 내보내기에서만 쉬운 말로 바꿔 보여 준다
+const modeLabel=m=>m==="온라인 저지"?"AI 채점":m==="자기평가"?"스스로 점검":m;
+
 function buildExport(){
-  let s="비버 수리소 — 제출 기록\n생성 "+new Date().toLocaleString("ko-KR")+"\n"+"=".repeat(52)+"\n";
+  let s="비버 수리소 — 제출 기록\n만든 시각 "+new Date().toLocaleString("ko-KR")+"\n"+"=".repeat(52)+"\n";
   if(!LOG.length) s+="\n(기록 없음)\n";
   LOG.forEach((r,i)=>{
-    s+=`\n[${i+1}] ${r.item}  ·  ${r.mode}  ·  설명 시도 ${r.try||1}\n`;
-    s+=`1단 : ${r.s1}  (제출 ${r.s1Submits||1}회, 첫 제출 ${r.s1First||r.s1})\n      ${r.answer}\n      시험 ${r.tests}회\n`;
-    s+=`근거 : ${r.reason||"(없음)"}\n`;
+    s+=`\n[${i+1}] ${r.item}  ·  ${modeLabel(r.mode)}  ·  설명 ${r.try||1}번째\n`;
+    s+=`1단계 : ${r.s1}  (${r.s1Submits||1}번 제출, 처음 낸 답 ${r.s1First||r.s1})\n      ${r.answer}\n      미리 해 본 횟수 ${r.tests}번\n`;
+    s+=`설명 : ${r.reason||"(없음)"}\n`;
     if(r.crits&&r.crits.length){
-      s+=`2단 : ${r.s2} / 12\n`;
+      s+=`2단계 : ${r.s2} / 12\n`;
       r.crits.forEach(c=>{ s+=`      ${c.name}  ${c.level}/3${c.overridden?"  (교사 조정)":""}${c.flag?"  ["+c.flag+"]":""}\n`;
-        if(c.quote) s+=`        인용: "${c.quote}"\n`; });
+        if(c.quote) s+=`        학생 문장: "${c.quote}"\n`; });
     }
     if(r.flags&&r.flags.length) s+=`확인 필요 : ${r.flags.join(" / ")}\n`;
-    if(r.probe) s+=`후속발문 : ${r.probe}\n`;
-    if(r.teacherMemo) s+=`조교메모 : ${r.teacherMemo}\n`;
+    if(r.probe) s+=`더 물어볼 질문 : ${r.probe}\n`;
+    if(r.teacherMemo) s+=`AI 메모 : ${r.teacherMemo}\n`;
     s+="-".repeat(52)+"\n";
   });
   return s;
@@ -1328,7 +1331,7 @@ function drawMain(){
       }catch(e){
         // 저지에 닿지 못하면 학생을 막다른 곳에 두지 않고 자기평가로 넘긴다
         APP.busy=false; APP.online=false; APP.verdict=null;
-        APP.notice="온라인 채점에 연결하지 못해서 스스로 점검하기로 바꿨습니다. ("+e.message+")";
+        APP.notice="AI 채점에 연결이 안 돼서 스스로 점검하기로 바꿨어요. ("+e.message+")";
         s.tries++; commit("offline",null); go("verdict");
       }
     };
