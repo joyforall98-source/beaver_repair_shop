@@ -871,14 +871,14 @@ ${safe}
 }
 
 async function callJudge(item, st1, text){
-  const res = await fetch("https://api.anthropic.com/v1/messages",{
+  // 🔒 API 키는 서버(Vercel 함수 /api/judge)에만 있으며, 브라우저는 채점 프롬프트만 보냅니다.
+  const res = await fetch("/api/judge",{
     method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:2000,
-      messages:[{role:"user",content:judgePrompt(item,st1,text)}] })
+    body:JSON.stringify({ prompt:judgePrompt(item,st1,text) })
   });
   if(!res.ok) throw new Error("채점 서버에 연결하지 못했어요 ("+res.status+")");
   const data=await res.json();
-  const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const raw=String(data.text||"");
   const clean=raw.replace(/```json/g,"").replace(/```/g,"").trim();
   const s=clean.indexOf("{"), e=clean.lastIndexOf("}");
   if(s<0||e<0) throw new Error("채점 결과를 읽지 못했어요");
