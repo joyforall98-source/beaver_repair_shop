@@ -870,13 +870,15 @@ ${safe}
 {"판정가능":true,"신뢰도":"높음|보통|낮음","기준별":[{"기준":"루브릭의 기준 이름","수준":0,"근거인용":"","메모":""}],"탐지된_풀이경로":"","학생용_피드백":"","후속발문":"","교사용_메모":""}`;
 }
 
+const JUDGE_REST="채점 기능을 담당하는 AI가 잠시 쉬는 시간이 필요하여 스스로 점검하는 모드로 바꿨어요. 잠시 뒤에 다시 시도해보세요.";
 async function callJudge(item, st1, text){
   // 🔒 API 키는 서버(Vercel 함수 /api/judge)에만 있으며, 브라우저는 채점 프롬프트만 보냅니다.
   const res = await fetch("/api/judge",{
     method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({ prompt:judgePrompt(item,st1,text) })
   });
-  if(!res.ok) throw new Error("채점 서버에 연결하지 못했어요 ("+res.status+")");
+  // 서버가 보낸 안내(쉬는 중 / 질문이 많음)를 그대로 학생에게 보여 줍니다
+  if(!res.ok){ const d=await res.json().catch(()=>({})); const e=new Error(d.error||JUDGE_REST); e.notice=true; throw e; }
   const data=await res.json();
   const raw=String(data.text||"");
   const clean=raw.replace(/```json/g,"").replace(/```/g,"").trim();
@@ -1331,7 +1333,8 @@ function drawMain(){
       }catch(e){
         // 저지에 닿지 못하면 학생을 막다른 곳에 두지 않고 자기평가로 넘긴다
         APP.busy=false; APP.online=false; APP.verdict=null;
-        APP.notice="AI 채점에 연결이 안 돼서 스스로 점검하기로 바꿨어요. ("+e.message+")";
+        console.error(e);
+        APP.notice=e.notice?e.message:JUDGE_REST;   // 답을 정리하지 못한 경우 등은 쉬는 중 안내로
         s.tries++; commit("offline",null); go("verdict");
       }
     };

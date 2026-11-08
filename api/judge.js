@@ -5,6 +5,10 @@
 const PROMPT_PREFIX = "당신은 초등학교 정보 수업의 채점 조교입니다.";
 const MAX_PROMPT_LENGTH = 12000;
 
+// 학생 화면에 보일 안내. 실제 원인(상태코드·Upstage 응답)은 Vercel 기록(Logs)에만 남깁니다
+const RESTING = '채점 기능을 담당하는 AI가 잠시 쉬는 시간이 필요하여 스스로 점검하는 모드로 바꿨어요. 잠시 뒤에 다시 시도해보세요.';
+const BUSY = '지금 질문이 많아 바로 답하기 어려워요. 잠시 뒤 다시 시도해 보세요.';
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
@@ -13,7 +17,8 @@ module.exports = async function handler(req, res) {
 
     const apiKey = String(process.env.UPSTAGE_API_KEY || '').trim();
     if (!apiKey) {
-        return res.status(500).json({ error: '서버에 UPSTAGE_API_KEY 환경 변수가 설정되지 않았습니다.' });
+        console.error('UPSTAGE_API_KEY 환경 변수가 없습니다');
+        return res.status(500).json({ error: RESTING });
     }
 
     const prompt = String((req.body && req.body.prompt) || '');
@@ -37,7 +42,9 @@ module.exports = async function handler(req, res) {
         });
 
         if (!response.ok) {
-            return res.status(502).json({ error: 'AI 채점 서버 오류 (' + response.status + ')' });
+            // 401·403: 키 문제 또는 크레딧 소진, 429: 요청이 너무 많음
+            console.error('Upstage 오류', response.status, (await response.text()).slice(0, 500));
+            return res.status(502).json({ error: response.status === 429 ? BUSY : RESTING });
         }
 
         const responseData = await response.json();
@@ -45,6 +52,6 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ text });
     } catch (error) {
         console.error(error);
-        return res.status(502).json({ error: 'AI 채점 서버에 연결하지 못했습니다.' });
+        return res.status(502).json({ error: RESTING });
     }
 };
